@@ -1,7 +1,8 @@
 # mesmerized
 "Because Offiz doesn't do much anymore"
+This program is designed to run as a web-server!
 
-Warning!
+# Warning!
 This file may be classified as malware due to
 
 Meaningless consumption of resources
