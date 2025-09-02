@@ -3,15 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <title>ProcBreak Launcher</title>
+<style>
+    #warning {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        color: red;
+        font-size: 20px;
+        font-family: sans-serif;
+        z-index: 9999;
+        margin: 0;
+    }
+</style>
 </head>
 <body style="display:flex;justify-content:center;align-items:center;height:100vh;">
     <button id="startBtn" style="padding:20px;font-size:24px;">start procbreak</button>
 
     <script>
+        // Check if running as file://
+        if (location.protocol === "file:") {
+            const warning = document.createElement("h1");
+            warning.id = "warning";
+            warning.textContent = "this is designed to be ran as a web-server!";
+            document.body.appendChild(warning);
+        }
+
         let audio;
 
         document.getElementById('startBtn').addEventListener('click', async () => {
-
             let stream;
             try {
                 stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
@@ -137,4 +156,3 @@
     </script>
 </body>
 </html>
-
