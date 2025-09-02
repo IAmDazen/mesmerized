@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ProcBreak Launcher</title>
+</head>
+<body style="display:flex;justify-content:center;align-items:center;height:100vh;">
+    <button id="startBtn" style="padding:20px;font-size:24px;">start procbreak</button>
+
+    <script>
+        let audio;
+
+        document.getElementById('startBtn').addEventListener('click', async () => {
+
+            // 1️⃣ Capture the screen BEFORE opening the popup
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            } catch (err) {
+                alert('Screen capture permission denied. ProcBreak cannot start.');
+                return;
+            }
+
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            await video.play();
+
+            // Draw one frame to use as static background
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Stop the stream after capturing
+            stream.getTracks().forEach(track => track.stop());
+
+            const capturedDataURL = canvas.toDataURL('image/png');
+
+            // 2️⃣ Popup creation function
+            function createPopup(left = 100, top = 100, withButton = false) {
+                const popup = window.open('', '', `width=400,height=300,left=${left},top=${top}`);
+                if (!popup) return null;
+
+                popup.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        background: black;
+    }
+    h1 { color: white; z-index:1; position:relative; }
+    button {
+        padding: 20px;
+        font-size: 24px;
+        margin-top: 20px;
+        z-index:1;
+        position:relative;
+    }
+    img {
+        position: absolute;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+        z-index:0;
+        opacity:0.5; /* semi-transparent */
+    }
+</style>
+</head>
+<body>
+    <img id="bgImg" src="${capturedDataURL}">
+    <h1>ProcBreak Window</h1>
+    ${withButton ? '<button id="confirmBtn">Are you sure?</button>' : ''}
+</body>
+</html>
+                `);
+                popup.document.close();
+
+                let hasSpawned = false;
+                const bgImg = popup.document.getElementById('bgImg');
+
+                if (withButton) {
+                    const confirmBtn = popup.document.getElementById('confirmBtn');
+                    confirmBtn.addEventListener('click', () => {
+                        // Fullscreen
+                        if (popup.document.documentElement.requestFullscreen) {
+                            popup.document.documentElement.requestFullscreen();
+                        } else if (popup.document.documentElement.webkitRequestFullscreen) {
+                            popup.document.documentElement.webkitRequestFullscreen();
+                        }
+
+                        // Play music
+                        audio = new Audio('theme.mp3');
+                        audio.loop = true;
+                        audio.autoplay = true;
+                        audio.volume = 1.0;
+                        document.body.appendChild(audio);
+
+                        // Open procbreak.html
+                        window.open('procbreak.html', '_blank');
+
+                        // Hide button
+                        confirmBtn.style.display = 'none';
+
+                        // Start color overlay + spawn duplicate
+                        const interval = setInterval(() => {
+                            if (popup.closed) {
+                                clearInterval(interval);
+                                return;
+                            }
+
+                            // Overlay color on top of captured background
+                            const r = Math.floor(Math.random()*256);
+                            const g = Math.floor(Math.random()*256);
+                            const b = Math.floor(Math.random()*256);
+                            bgImg.style.backgroundColor = `rgba(${r},${g},${b},0.3)`;
+
+                            // Spawn one duplicate
+                            if (!hasSpawned) {
+                                const left = Math.floor(Math.random() * (screen.width - 400));
+                                const top = Math.floor(Math.random() * (screen.height - 300));
+                                createPopup(left, top, false);
+                                hasSpawned = true;
+                            }
+
+                            popup.focus();
+                        }, 333);
+                    });
+                }
+
+                return popup;
+            }
+
+            // Initial popup with Are You Sure button
+            createPopup(100, 100, true);
+
+            // Disable start button
+            document.getElementById('startBtn').disabled = true;
+        });
+    </script>
+</body>
+</html>
+

